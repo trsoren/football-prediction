@@ -10,14 +10,14 @@ for (fn in list.files()) {
   
   
   team$Position
-  df = data.frame(year=2009, team=name, position = team$Position, overall= team$OVERALL)
+  df = data.frame(year=2011, team=name, position = team$POSITION, overall=team$"OVERALL RATING")
   master_ratings=rbind(master_ratings, df)
 }
-  
-write.csv(master_ratings, "all2019.csv")
-  
-  
- # team <- # code to load in csv as df
-    
-    
- #   team[]
+
+write.csv(master_ratings, "data2011.csv", row.names=FALSE)
+
+
+# team <- # code to load in csv as df
+
+
+#   team[]
