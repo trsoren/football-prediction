@@ -8,9 +8,13 @@ for (fn in list.files()) {
   team = read_excel(fn)
   name = strsplit(fn, "_madden") [[1]][1]
   
+  if (name == "chicago_bears" || name == "tennessee_titans") {
+    df = data.frame(year=2011, team=name, position = team$POSITION, overall=team$"OVERALL\nRATING")
+  }
+  else {
+    df = data.frame(year=2011, team=name, position = team$POSITION, overall=team$"OVERALL RATING")
+  }
   
-  team$Position
-  df = data.frame(year=2011, team=name, position = team$POSITION, overall=team$"OVERALL RATING")
   master_ratings=rbind(master_ratings, df)
 }
 
