@@ -1,6 +1,6 @@
 library(readxl)
 
-setwd('/Users/trsorensen/Code/EECS448/football/data/madden/raw_data/2009/raw')
+setwd('~/Desktop/eecs_448/football-prediction/data/madden/raw_data/2009/raw')
 
 master_ratings = data.frame(matrix(ncol=4, nrow=0))
 colnames(master_ratings) = c("year", "team", "position", "overall")

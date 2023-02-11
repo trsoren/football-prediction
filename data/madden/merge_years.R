@@ -1,4 +1,4 @@
-setwd('/Users/trsorensen/Code/EECS448/football/data/madden/')
+setwd('~/Desktop/eecs_448/football-prediction/data/madden')
 
 all_data = data.frame(data.frame(matrix(ncol=4, nrow=0)))
 colnames(all_data) = c("year", "team", "position", "overall")
