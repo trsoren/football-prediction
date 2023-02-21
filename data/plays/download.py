@@ -37,15 +37,16 @@ for input in input_files:
 
     for index, row in df.iterrows():
         df.loc[index, row['posteam'] + '_OFF'] = 1
-        df.loc[index, row['posteam'] + '_DEF'] = 1
+        df.loc[index, row['defteam'] + '_DEF'] = 1
 
     df['season'] -= 2009
 
     df['play_type'] = df['play_type'].replace({'run': 0, 'pass': 1})
 
-    df = df.drop(['play_id', 'posteam', 'defteam'], axis=1)
+    df = df[df['penalty'] != 1]
+    df = df.drop(['play_id', 'posteam', 'defteam', 'penalty'], axis=1)
     df['game_half'] = df['game_half'].astype(int)
     df = df.dropna()
-    df = df[df['penalty'] != 1]
+ 
 
     df.to_csv('play_features.csv', index=False, mode='a', header=False)

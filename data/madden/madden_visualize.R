@@ -1,6 +1,6 @@
-df = read.csv("final_madden.csv")
+df = read.csv("/Users/trsorensen/Code/EECS448/football/data/madden/final_madden.csv")
 
-png('plot.png', width=600, height=6400)
+png('/Users/trsorensen/Code/EECS448/football/plot.png', width=600, height=6400)
 par(mfrow=c(32, 1))
 
 for (team in unique(df$team)) {
