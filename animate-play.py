@@ -8,9 +8,10 @@ import shutil
 
 WORK_DIR = '/Users/trsorensen/Code/EECS448/football'
 
-def plot_frame(frameId, df):
+def plot_frame(frameId, df, x_range_size, y_range_size):
+        """ Plots a single frame of a play. Called many times to build animations. """
         df = df[df['frameId'] == frameId]
-        field = np.zeros((120, 54))
+        field = np.zeros((x_range_size, y_range_size))
         field[df['grid_x'][df['team'] == 'away'], df['grid_y'][df['team'] == 'away']] = 2
         field[df['grid_x'][df['team'] == 'home'], df['grid_y'][df['team'] == 'home']] = 4
         field[df['grid_x'][df['team'] == 'football'], df['grid_y'][df['team'] == 'football']] = 6
@@ -20,8 +21,8 @@ def plot_frame(frameId, df):
         bounds=[-1,1,3,5,7]
         norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
         plt.imshow(field, cmap=cmap, norm=norm)
-        plt.axhline(y=10, color='black', linestyle='-')
-        plt.axhline(y=110, color='black', linestyle='-')
+        plt.axhline(y=x_range_size*(1.0/12.0), color='black', linestyle='-')
+        plt.axhline(y=x_range_size-x_range_size*(1.0/12.0) , color='black', linestyle='-')
         plt.savefig(f'{WORK_DIR}/img/img{frameId}.png')
         plt.close()
 
@@ -33,26 +34,26 @@ def main():
 
     games = df['gameId'].unique()
     
-    # Looking at first game of the season
+    # Specify game and play to look at
     df = df[df['gameId'] == 2018122300]
-
     df = df[df['playId'] == 838]
 
-    # Assign each player to grid coordinates. field size is grid with x: 0 to 120, y: 0 to 53.3
-    grid_x = np.floor(df['x']).astype(int)
-    grid_y = np.floor(df['y']).astype(int)
-    grid_x[grid_x < 0] = 0
-    grid_x[grid_x > 119] = 119
-    grid_y[grid_y < 0] = 0
-    grid_y[grid_y > 53] = 53
-    df['grid_x'] = grid_x
-    df['grid_y'] = grid_y
+    # Assign each player to grid coordinates. Old x range: (0, 120). Old y range: (0, 53.3)
+    new_x_range = (0, 80)
+    new_y_range = (0, 30)
+    x_range_size = new_x_range[1] - new_x_range[0]
+    y_range_size = new_y_range[1] - new_y_range[0]
+    x_scaled = df['x'] / 120.0
+    y_scaled = df['y'] / 53.3
+    df['grid_x'] = np.round(x_scaled * x_range_size).astype(int)
+    df['grid_y'] = np.round(y_scaled * y_range_size).astype(int)
+
 
     # Create img folder and save each frame to it
     os.mkdir(WORK_DIR + '/img/')
     frameIds = df['frameId'].unique()
     for frameId in frameIds:
-         plot_frame(frameId, df)
+         plot_frame(frameId, df, x_range_size, y_range_size)
 
     # Put frames all together
     frames = []
