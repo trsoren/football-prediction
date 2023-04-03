@@ -6,7 +6,7 @@ import matplotlib as mpl
 import os
 import shutil
 
-WORK_DIR = '/Users/trsorensen/Code/EECS448/football'
+WORK_DIR = '/Users/Patrick/stuff/school/448/football-prediction'
 
 def plot_frame(frameId, df, x_range_size, y_range_size):
         """ Plots a single frame of a play. Called many times to build animations. """
@@ -65,11 +65,11 @@ def main():
     # Put frames all together
     frames = []
     for frameId in frameIds:
-        image = imageio.v2.imread(f'/Users/trsorensen/Code/EECS448/football/img/img{frameId}.png')
+        image = imageio.v2.imread(f'/Users/Patrick/stuff/school/448/football-prediction/img/img{frameId}.png')
         frames.append(image)
 
     # Save gif and remove the directory of frames
-    imageio.mimsave('/Users/trsorensen/Code/EECS448/football/play.gif',
+    imageio.mimsave('/Users/Patrick/stuff/school/448/football-prediction/play.gif',
                     frames,
                     fps = 10)
     shutil.rmtree(WORK_DIR + '/img')
