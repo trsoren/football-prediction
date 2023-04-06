@@ -1,67 +1,107 @@
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
 import tensorflow as tf
+from tensorflow import keras
+from sklearn.model_selection import KFold
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from keras import regularizers
 
 # Load the csv data into a pandas dataframe
 df = pd.read_csv('nn_data.csv')
 
-value_counts = df['outcome'].value_counts(normalize=True) * 100
-print("Full dataset balance")
-print(value_counts)
-
 # Convert the "outcome" column to numerical values
 df['outcome'], label_strings = pd.factorize(df['outcome'])
 
-# count the number of occurrences of each value and compute the percentage
-
-# Split the dataframe into training and testing sets
-train_df, test_df = train_test_split(df, test_size=0.2, random_state=42)
-
-train = train_df.drop(['outcome'], axis=1)
-test = test_df.drop(['outcome'], axis=1)
-
 # Normalize the input features
 scaler = StandardScaler()
+X = scaler.fit_transform(df.drop(['outcome'], axis=1))
+y = df['outcome'].values
 
-train_X = scaler.fit_transform(train)
-train_y = train_df['outcome'].values
-test_X = scaler.transform(test)
-test_y = test_df['outcome'].values
+# Split the dataframe into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=42)
 
-# Build a neural network model using TensorFlow
-model = tf.keras.Sequential([
-    tf.keras.layers.Dense(128, activation='relu', input_shape=(512,)),
-    tf.keras.layers.Dense(64, activation='relu'),
-    tf.keras.layers.Dense(6, activation='softmax')
-])
+# Define the neural network model
+def create_model():
+    model = keras.Sequential([
+        keras.layers.Dense(64, activation='relu', input_shape=(512,), kernel_regularizer=regularizers.l2(0.001)),
+        keras.layers.Dropout(0.5),
+        keras.layers.Dense(64, activation='relu', kernel_regularizer=regularizers.l2(0.001)),
+        keras.layers.Dropout(0.5),
+        keras.layers.Dense(6, activation='softmax')
+    ])
+    return model
 
-# Compile the model with appropriate loss function and optimizer
-model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+# Set the initial learning rate
+initial_learning_rate = 0.1
 
-# Train the model on the training set
-model.fit(train_X, train_y, epochs=10, batch_size=32, validation_split=0.2)
+# Define the learning rate schedule
+lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
+    initial_learning_rate,
+    decay_steps=2, # decrease the learning rate by factor of 2 every 5 epochs
+    decay_rate=0.5
+)
 
-# Evaluate the model on the testing set
-test_loss, test_acc = model.evaluate(test_X, test_y, verbose=2)
-print('\nTest accuracy:', test_acc)
+# Define early stopping to prevent overfitting
+early_stopping = keras.callbacks.EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
 
-# assuming `model` is your trained Keras model and `test_X` is your test input data
-predictions = model.predict(test_X)
+# Define a function to calculate the UAR
+def uar(y_true, y_pred):
+    """
+    Unweighted Average Recall (UAR) metric
+    """
+    true_positives = tf.math.count_nonzero(tf.math.logical_and(tf.math.equal(y_true, 1), tf.math.equal(tf.math.round(y_pred), 1)), axis=0)
+    true_negatives = tf.math.count_nonzero(tf.math.logical_and(tf.math.equal(y_true, 0), tf.math.equal(tf.math.round(y_pred), 0)), axis=0)
+    false_positives = tf.math.count_nonzero(tf.math.logical_and(tf.math.equal(y_true, 0), tf.math.equal(tf.math.round(y_pred), 1)), axis=0)
+    false_negatives = tf.math.count_nonzero(tf.math.logical_and(tf.math.equal(y_true, 1), tf.math.equal(tf.math.round(y_pred), 0)), axis=0)
+    
+    recall = true_positives / (true_positives + false_negatives)
+    uar = tf.reduce_mean(recall)
+    return uar
 
-# get the index of the max value in each row
-predicted_labels = predictions.argmax(axis=1)
+kfold = KFold(n_splits=5, shuffle=True, random_state=42)
+scores = []
 
-# assuming `predicted_labels` is your 1D array of predicted integer labels
-predicted_strings = [label_strings[label] for label in predicted_labels]
+for fold_idx, (train_idx, val_idx) in enumerate(kfold.split(X_train, y_train)):
+    print(f"Fold {fold_idx+1}:")
+    X_fold_train, y_fold_train = X_train[train_idx], y_train[train_idx]
+    X_fold_val, y_fold_val = X_train[val_idx], y_train[val_idx]
 
-# convert the predictions to a pandas dataframe with one column
-predictions_df = pd.DataFrame(predicted_strings, columns=['outcome'])
+    # Build and compile the model for the current fold
+    model = create_model()
+    model.compile(optimizer=keras.optimizers.Adam(learning_rate=lr_schedule), 
+                  loss='sparse_categorical_crossentropy', 
+                  metrics=[uar])
 
-# count the number of occurrences of each value and compute the percentage
-value_counts = predictions_df['outcome'].value_counts(normalize=True) * 100
+    # Train the model on the current fold's training set
+    history = model.fit(X_fold_train, y_fold_train, epochs=50, batch_size=32, validation_data=(X_fold_val, y_fold_val), callbacks=[early_stopping])
 
-# print the result
-print("Prediction balance")
-print(value_counts)
+    # Evaluate the model on the current fold's validation set
+    y_pred_fold_val = model.predict(X_fold_val)
+    y_pred_fold_val_classes = np.argmax(y_pred_fold_val, axis=1)
+    scores.append(uar(y_fold_val, y_pred_fold_val_classes))
+
+# Compute the mean and standard deviation of the cross-validation scores
+mean_score = np.mean(scores)
+std_score = np.std(scores)
+print(f"\nCross-validation scores: {mean_score:.3f} (+/- {std_score:.3f}) UAR")
+
+# Assuming `model` is your trained Keras model and `X_test` is your test input data
+y_pred = model.predict(X_test)
+y_pred_classes = np.argmax(y_pred, axis=1)
+
+# Compute the frequency of each class in the predicted labels
+class_freq_pred = np.bincount(y_pred_classes, minlength=6)
+
+# Normalize the class frequencies by the total number of predictions and multiply by 100
+class_freq_pred_norm = class_freq_pred / len(y_pred_classes) * 100
+
+# Compute the frequency of each class in the original dataset
+class_freq_orig = np.bincount(y, minlength=6)
+
+# Normalize the class frequencies by the total number of examples and multiply by 100
+class_freq_orig_norm = class_freq_orig / len(y) * 100
+
+# Print the results
+print("Class frequencies in the predicted labels (normalized by the total number of predictions):\n", class_freq_pred_norm)
+print("Class frequencies in the original dataset (normalized by the total number of examples):\n", class_freq_orig_norm)
