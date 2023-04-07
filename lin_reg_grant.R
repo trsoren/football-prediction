@@ -17,10 +17,12 @@ data$outcome[data$outcome =="deep left"] <- 4
 data$outcome[data$outcome =="deep middle"] <- 5
 data$outcome[data$outcome =="deep right"] <- 6
 
+data$outcome <- as.integer(data$outcome)
 
 data <- na.omit(data)
 unique(data)
-mod <- glm(data=data, outcome ~ .)
-#cor(data)
+mod <- lm(data=data, outcome ~ half_seconds_remaining + game_half + posteam_timeouts_remaining + down + ydstogo + no_huddle + score_differential + season)
+cor(mod)
+# OUTCOME IS CHR, NOT NUM OR INT!!!
 
 
