@@ -7,19 +7,20 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from keras import regularizers
 
-# Load the csv data into a pandas dataframe
-df = pd.read_csv('nn_data.csv')
+# Load the csv data into pandas dataframes
+df_train = pd.read_csv('nn_data_train_augmented.csv')
+df_test = pd.read_csv('nn_data_test.csv')
 
 # Convert the "outcome" column to numerical values
-df['outcome'], label_strings = pd.factorize(df['outcome'])
+df_train['outcome'], label_strings = pd.factorize(df_train['outcome'])
+df_test['outcome'], label_strings = pd.factorize(df_test['outcome'])
 
-# Normalize the input features
+# Normalize the input features. Fit scalar on train data only, then apply to train and test.
 scaler = StandardScaler()
-X = scaler.fit_transform(df.drop(['outcome'], axis=1))
-y = df['outcome'].values
-
-# Split the dataframe into training and testing sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=42)
+X_train = scaler.fit_transform(df_train.drop(['outcome'], axis=1))
+y_train = df_train['outcome'].values
+X_test = scaler.transform(df_test.drop(['outcome'], axis=1))
+y_test = df_test['outcome'].values
 
 # Define the neural network model
 def create_model():
@@ -96,12 +97,12 @@ class_freq_pred = np.bincount(y_pred_classes, minlength=6)
 # Normalize the class frequencies by the total number of predictions and multiply by 100
 class_freq_pred_norm = class_freq_pred / len(y_pred_classes) * 100
 
-# Compute the frequency of each class in the original dataset
-class_freq_orig = np.bincount(y, minlength=6)
+# Compute the frequency of each class in the test dataset
+class_freq_orig = np.bincount(y_test, minlength=6)
 
 # Normalize the class frequencies by the total number of examples and multiply by 100
-class_freq_orig_norm = class_freq_orig / len(y) * 100
+class_freq_orig_norm = class_freq_orig / len(y_test) * 100
 
 # Print the results
-print("Class frequencies in the predicted labels (normalized by the total number of predictions):\n", class_freq_pred_norm)
-print("Class frequencies in the original dataset (normalized by the total number of examples):\n", class_freq_orig_norm)
+print("Class frequencies in the predicted labels:\n", class_freq_pred_norm)
+print("Class frequencies in the test dataset:\n", class_freq_orig_norm)

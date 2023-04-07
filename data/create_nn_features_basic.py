@@ -64,7 +64,7 @@ def main():
             field[group.grid_x[group.team == def_team], group.grid_y[group.team == def_team]] = 1
 
             football_x = group.grid_x[group.team == 'football'].iloc[0]
-            # NOTE: manually change the ranges here if adjusing grid size
+            # NOTE: manually change the ranges here if adjusing grid size. Current: 28x18
             min_x = football_x - 13
             max_x = football_x + 5
             # handle if the range is larger than extent of football field
@@ -81,7 +81,7 @@ def main():
                 grids[id] = field_shrunk
 
     # create csv with gameId, playId, then all the grid points flattened to a list in each row
-    arr = np.empty((0, 506))
+    arr = np.empty((0, 504))
     for gameId, playId in list(grids.keys()):
         row = grids[(gameId, playId)].flatten().tolist()
         row.insert(0, playId)
