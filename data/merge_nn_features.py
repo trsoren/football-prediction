@@ -4,6 +4,7 @@ from sklearn.model_selection import train_test_split
 
 WORK_DIR = '/Users/Patrick/stuff/school/448/football-prediction'
     
+final_features = ['half_seconds_remaining','game_half','posteam_timeouts_remaining','down','ydstogo','no_huddle','score_differential','season']
 
 def main():
 
@@ -12,10 +13,13 @@ def main():
     play_df = pd.read_csv('data/pass_play_data.csv')
     position_df = pd.read_csv('data/player_positions_basic.csv')
 
+    print(position_df.columns)
 
     # Merge the rows where the playId and gameId are the same in both files
     merged = pd.merge(play_df, position_df, on=['playId', 'gameId'])
     merged = merged.drop(['gameId', 'playId'], axis=1)
+    merged = merged.drop(final_features, axis=1)
+
 
     # Remove "incomplete/complete" from outcome
     merged['outcome'] = merged['outcome'].str.replace('incomplete ', '')

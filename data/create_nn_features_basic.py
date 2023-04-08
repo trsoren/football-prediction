@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import random
 
-WORK_DIR = '/Users/trsorensen/Code/EECS448/football'
+WORK_DIR = '/Users/patrick/stuff/school/448/football-prediction'
 NEW_X_RANGE = (0, 60)
 NEW_Y_RANGE = (0, 27)
 
@@ -60,8 +60,31 @@ def main():
             off_team = group.team[group.grid_x == max(group.grid_x)].iloc[0]
             def_team = group.team[group.grid_x == min(group.grid_x)].iloc[0]
 
-            field[group.grid_x[group.team == off_team], group.grid_y[group.team == off_team]] = -1
-            field[group.grid_x[group.team == def_team], group.grid_y[group.team == def_team]] = 1
+            x_off = group.grid_x[group.team == off_team]
+            y_off = group.grid_y[group.team == off_team]
+            field[x_off, y_off] = 1
+
+            x_def = group.grid_x[group.team == def_team]
+            y_def = group.grid_y[group.team == def_team]
+            field[x_def, y_def] = -1
+
+            for i in range(-1, 2):
+                for j in range(-1, 2):
+                    if i == 0 and j == 0:
+                        continue
+                    x_off_adj = x_off + i
+                    y_off_adj = y_off + j
+
+                    x_def_adj = x_def + i
+                    y_def_adj = y_def + j
+                    
+                    for k, l in np.nditer([x_off_adj, y_off_adj]):
+                        if (0 <= k < field.shape[0]) and (0 <= l < field.shape[1]):
+                            field[k, l] += 0.5
+
+                    for k, l in np.nditer([x_def_adj, y_def_adj]):
+                        if (0 <= k < field.shape[0]) and (0 <= l < field.shape[1]):
+                            field[k, l] -= 0.5
 
             football_x = group.grid_x[group.team == 'football'].iloc[0]
             # NOTE: manually change the ranges here if adjusing grid size. Current: 28x18
@@ -81,13 +104,13 @@ def main():
                 grids[id] = field_shrunk
 
     # create csv with gameId, playId, then all the grid points flattened to a list in each row
-    arr = np.empty((0, 504))
+    arr = np.empty((0, 506))
     for gameId, playId in list(grids.keys()):
         row = grids[(gameId, playId)].flatten().tolist()
         row.insert(0, playId)
         row.insert(0, gameId)
         arr = np.vstack([arr, row])
-    np.savetxt(WORK_DIR + '/data/player_positions_basic.csv', arr.astype(int), delimiter=',', fmt='%d')
+    np.savetxt(WORK_DIR + '/data/player_positions_basic.csv', arr.astype(float), delimiter=',', fmt='%f')
 
     # plot 10 random grids and save as png
     some_plays = random.sample(list(grids.keys()), 10)

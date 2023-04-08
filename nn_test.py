@@ -8,7 +8,7 @@ from sklearn.model_selection import train_test_split
 from keras import regularizers
 
 # Load the csv data into pandas dataframes
-df_train = pd.read_csv('nn_data_train_augmented.csv')
+df_train = pd.read_csv('nn_data_train.csv')
 df_test = pd.read_csv('nn_data_test.csv')
 
 # Convert the "outcome" column to numerical values
@@ -25,7 +25,7 @@ y_test = df_test['outcome'].values
 # Define the neural network model
 def create_model():
     model = keras.Sequential([
-        keras.layers.Dense(64, activation='relu', input_shape=(512,), kernel_regularizer=regularizers.l2(0.001)),
+        keras.layers.Dense(64, activation='relu', input_shape=(504,), kernel_regularizer=regularizers.l2(0.001)), # TODO: change this 512
         keras.layers.Dropout(0.5),
         keras.layers.Dense(64, activation='relu', kernel_regularizer=regularizers.l2(0.001)),
         keras.layers.Dropout(0.5),
@@ -34,7 +34,7 @@ def create_model():
     return model
 
 # Set the initial learning rate
-initial_learning_rate = 0.1
+initial_learning_rate = 0.01
 
 # Define the learning rate schedule
 lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
