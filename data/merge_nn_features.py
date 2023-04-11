@@ -18,7 +18,6 @@ def main():
     # Merge the rows where the playId and gameId are the same in both files
     merged = pd.merge(play_df, position_df, on=['playId', 'gameId'])
     merged = merged.drop(['gameId', 'playId'], axis=1)
-    merged = merged.drop(final_features, axis=1)
 
 
     # Remove "incomplete/complete" from outcome

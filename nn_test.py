@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import tensorflow as tf
+import tensorflow_addons as tfa
 from tensorflow import keras
 from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
@@ -18,19 +19,31 @@ df_test['outcome'], label_strings = pd.factorize(df_test['outcome'])
 # Normalize the input features. Fit scalar on train data only, then apply to train and test.
 scaler = StandardScaler()
 X_train = scaler.fit_transform(df_train.drop(['outcome'], axis=1))
-y_train = df_train['outcome'].values
+y_train = keras.utils.to_categorical(df_train['outcome'].values)
 X_test = scaler.transform(df_test.drop(['outcome'], axis=1))
-y_test = df_test['outcome'].values
+y_test = keras.utils.to_categorical(df_test['outcome'].values)
+
 
 # Define the neural network model
 def create_model():
-    model = keras.Sequential([
-        keras.layers.Dense(64, activation='relu', input_shape=(504,), kernel_regularizer=regularizers.l2(0.001)), # TODO: change this 512
-        keras.layers.Dropout(0.5),
-        keras.layers.Dense(64, activation='relu', kernel_regularizer=regularizers.l2(0.001)),
-        keras.layers.Dropout(0.5),
-        keras.layers.Dense(6, activation='softmax')
-    ])
+    input_layer = keras.layers.Input(shape=(512,)) # assuming your flattened input data has shape (512,)
+    metadata_layer = keras.layers.Lambda(lambda x: x[:, :8])(input_layer) # hold out the first 8 features as metadata
+    image_layer = keras.layers.Lambda(lambda x: x[:, 8:])(input_layer) # use the remaining features as image data
+
+    reshape_layer = keras.layers.Reshape((18, 28, 1))(image_layer) # reshape the image data to 2D (28 x 18 x 1) for example
+    
+    conv_layer = keras.layers.Conv2D(4, (10,10), activation='relu')(reshape_layer)
+    pool_layer = keras.layers.MaxPooling2D((2,2))(conv_layer)
+    flatten_layer = keras.layers.Flatten()(pool_layer)
+    
+    concat_layer = keras.layers.Concatenate()([flatten_layer, metadata_layer])
+    
+    dense_layer_1 = keras.layers.Dense(16, activation='relu', kernel_regularizer=regularizers.l2(0.001))(concat_layer)
+    dropout_layer_1 = keras.layers.Dropout(0.5)(dense_layer_1)
+    output_layer = keras.layers.Dense(6, activation='softmax')(dropout_layer_1)
+    
+    model = keras.Model(inputs=input_layer, outputs=output_layer)
+    print(model.summary())
     return model
 
 # Set the initial learning rate
@@ -71,16 +84,19 @@ for fold_idx, (train_idx, val_idx) in enumerate(kfold.split(X_train, y_train)):
     # Build and compile the model for the current fold
     model = create_model()
     model.compile(optimizer=keras.optimizers.Adam(learning_rate=lr_schedule), 
-                  loss='sparse_categorical_crossentropy', 
-                  metrics=[uar])
-
+                  loss='categorical_crossentropy', 
+                  metrics=[keras.metrics.Recall(name='UAR')])
+    
     # Train the model on the current fold's training set
     history = model.fit(X_fold_train, y_fold_train, epochs=50, batch_size=32, validation_data=(X_fold_val, y_fold_val), callbacks=[early_stopping])
-
+    
     # Evaluate the model on the current fold's validation set
-    y_pred_fold_val = model.predict(X_fold_val)
-    y_pred_fold_val_classes = np.argmax(y_pred_fold_val, axis=1)
-    scores.append(uar(y_fold_val, y_pred_fold_val_classes))
+    #y_pred_fold_val = model.predict(X_fold_val)
+    #y_pred_fold_val_classes = np.argmax(y_pred_fold_val, axis=1)
+    #scores.append(uar(y_fold_val, y_pred_fold_val_classes))
+    # Evaluate the model on the current fold's validation set
+    scores = model.evaluate(X_fold_val, y_fold_val, verbose=0)
+    print(f"Validation UAR: {scores[1]:.4f}")
 
 # Compute the mean and standard deviation of the cross-validation scores
 mean_score = np.mean(scores)

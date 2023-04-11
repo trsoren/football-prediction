@@ -1,3 +1,4 @@
+import math
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -68,8 +69,10 @@ def main():
             y_def = group.grid_y[group.team == def_team]
             field[x_def, y_def] = -1
 
-            for i in range(-1, 2):
-                for j in range(-1, 2):
+            football_x = group.grid_x[group.team == 'football'].iloc[0]
+
+            for i in range(-2, 3):
+                for j in range(-2, 3):
                     if i == 0 and j == 0:
                         continue
                     x_off_adj = x_off + i
@@ -77,16 +80,21 @@ def main():
 
                     x_def_adj = x_def + i
                     y_def_adj = y_def + j
+
+                    modifier = 0
+                    if abs(i) == 2 or abs(j) == 2:
+                        modifier = .125
+                    elif abs(i) == 1 or abs(j) == 1:
+                        modifier = .4
                     
                     for k, l in np.nditer([x_off_adj, y_off_adj]):
-                        if (0 <= k < field.shape[0]) and (0 <= l < field.shape[1]):
-                            field[k, l] += 0.5
+                        if (0 <= k < field.shape[0]) and (0 <= l < field.shape[1]) and (football_x <= k):
+                            field[k, l] += modifier
 
                     for k, l in np.nditer([x_def_adj, y_def_adj]):
-                        if (0 <= k < field.shape[0]) and (0 <= l < field.shape[1]):
-                            field[k, l] -= 0.5
+                        if (0 <= k < field.shape[0]) and (0 <= l < field.shape[1]) and (0 <= k < football_x):
+                            field[k, l] -= modifier
 
-            football_x = group.grid_x[group.team == 'football'].iloc[0]
             # NOTE: manually change the ranges here if adjusing grid size. Current: 28x18
             min_x = football_x - 13
             max_x = football_x + 5
